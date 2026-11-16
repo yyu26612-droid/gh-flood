@@ -1,0 +1,28 @@
+name: g
+on:
+  workflow_dispatch:
+    inputs:
+      conc:
+        description: 'threads per job'
+        default: '500'
+      dur:
+        description: 'seconds (max 21000)'
+        default: '21000'
+
+jobs:
+  f:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        shard: [1,2,3,4,5,6,7,8]
+    steps:
+      - uses: actions/checkout@v4
+      - name: f
+        env:
+          TARGET_URL: ${{ secrets.TARGET_URL }}
+          TARGET_PATH: ${{ secrets.TARGET_PATH }}
+        run: |
+          python3 native_login_blast.py -c "${{ github.event.inputs.conc }}" -n "${{ github.event.inputs.dur }}"
