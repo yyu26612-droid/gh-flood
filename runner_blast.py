@@ -91,14 +91,15 @@ def main():
     ap.add_argument("-H", "--host", default="ddsc.aapppp.cn")
     ap.add_argument("-c", "--conc", type=int, default=100)
     ap.add_argument("-n", "--dur", type=int, default=1500)
-    ap.add_argument("--mode", default="loginsub", choices=list(TARGETS.keys()))
+    ap.add_argument("--mode", default="loginsub", choices=list(TARGETS.keys()) + ["mix"])
     ap.add_argument("--mix", action="store_true", help="四个接口混合打(更难受)")
     a = ap.parse_args()
 
     threads = []
+    modes = list(TARGETS.keys())
     for i in range(a.conc):
-        if a.mix:
-            mode = list(TARGETS.keys())[i % 4]
+        if a.mix or a.mode == "mix":
+            mode = modes[i % len(modes)]
         else:
             mode = a.mode
         method, path = TARGETS[mode]
