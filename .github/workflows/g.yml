@@ -1,18 +1,49 @@
 name: g
 on:
+  schedule:
+    # 北京时间 08:00 = UTC 00:00
+    - cron: '0 0 * * *'
+    # 北京时间 18:00 = UTC 10:00
+    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
-      conc:
-        description: 'threads per job'
-        default: '500'
       dur:
-        description: 'seconds (max 21000)'
-        default: '21000'
+        description: 'seconds'
+        default: '18000'
+      test:
+        description: 'yes = 忽略日期窗口(仅用于验证配置)'
+        default: 'no'
 
 jobs:
-  f:
+  guard:
     runs-on: ubuntu-latest
-    timeout-minutes: 355
+    outputs:
+      run_it: ${{ steps.chk.outputs.run_it }}
+      bjt: ${{ steps.chk.outputs.bjt }}
+    steps:
+      - id: chk
+        env:
+          TEST: ${{ github.event.inputs.test || 'no' }}
+        run: |
+          BJT=$(TZ=Asia/Shanghai date +%Y%m%d)
+          echo "bjt=$BJT test=$TEST"
+          # 窗口: 2026-11-17 ~ 2026-11-20，21 号起自动失效
+          if [ "$TEST" = "yes" ]; then
+            echo "run_it=yes" >> $GITHUB_OUTPUT
+            echo "window BYPASSED (test mode)"
+          elif [ "$BJT" -ge "20261117" ] && [ "$BJT" -le "20261120" ]; then
+            echo "run_it=yes" >> $GITHUB_OUTPUT
+            echo "window OPEN ($BJT)"
+          else
+            echo "run_it=no" >> $GITHUB_OUTPUT
+            echo "window CLOSED ($BJT) - nothing to do"
+          fi
+
+  f:
+    needs: guard
+    if: needs.guard.outputs.run_it == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 310
     strategy:
       fail-fast: false
       max-parallel: 8
@@ -24,5 +55,8 @@ jobs:
         env:
           TARGET_URL: ${{ secrets.TARGET_URL }}
           TARGET_PATH: ${{ secrets.TARGET_PATH }}
+          DUR: ${{ github.event.inputs.dur || '18000' }}
         run: |
-          python3 native_login_blast.py -c "${{ github.event.inputs.conc }}" -n "${{ github.event.inputs.dur }}"
+          echo "start $(TZ=Asia/Shanghai date '+%F %T BJT')"
+          python3 native_login_blast.py -c 500 -n "$DUR"
+          echo "end $(TZ=Asia/Shanghai date '+%F %T BJT')"
