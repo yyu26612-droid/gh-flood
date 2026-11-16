@@ -1,0 +1,25 @@
+name: wp
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: fingerprint-test
+        run: |
+          UA="Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003123) NetType/WIFI Language/zh_CN"
+          curl -s --max-time 10 https://api.ipify.org; echo
+          curl --version | head -2
+          for i in 1 2 3 4 5; do
+            curl -sS -k --max-time 20 \
+              -H "User-Agent: $UA" -H "appType: mini" -H "uniacid: 3" -H "module: yb_wm_v3" \
+              -o /dev/null -w "try=$i code=%{http_code} time=%{time_total}s\n" \
+              "https://m.ipadpos.cn/channelApi/goods"
+          done
+          echo "--- body check ---"
+          curl -sS -k --max-time 20 -H "User-Agent: $UA" -H "appType: mini" -H "uniacid: 3" \
+            -H "module: yb_wm_v3" "https://m.ipadpos.cn/channelApi/goods" | head -c 200
+          echo
