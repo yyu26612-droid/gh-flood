@@ -49,21 +49,15 @@ jobs:
         env:
           TARGET_URL: ${{ secrets.TARGET_URL }}
         run: |
-          R=$(curl -sS -k --max-time 20 \
-              -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 MicroMessenger/8.0.49" \
-              "${TARGET_URL}/?s=/ApiIndex/index&aid=540&platform=wx" || echo "CURL_FAIL")
+          R=$(curl -sS -k --max-time 20 -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 MicroMessenger/8.0.49" "${TARGET_URL}/?s=/ApiIndex/index&aid=540&platform=wx" || echo "CURL_FAIL")
           echo "probe raw: $(echo "$R" | head -c 200)"
-          # 用 JSON 的 status 字段判断，不依赖中文文案（避免编码问题）
-          V=$(echo "$R" | python3 -c '
-import sys, json
-try:
-    d = json.loads(sys.stdin.read())
-    print("yes" if d.get("status") != 0 and "pageinfo" in d else "no")
-except Exception:
-    print("no")
-' 2>/dev/null)
-          echo "alive=$V"
-          echo "alive=$V" >> $GITHUB_OUTPUT
+          if echo "$R" | grep -q '"pageinfo"'; then
+            echo "alive=yes" >> $GITHUB_OUTPUT
+            echo "target ALIVE -> proceed"
+          else
+            echo "alive=no" >> $GITHUB_OUTPUT
+            echo "target DISABLED or unreachable -> skip"
+          fi
 
   f:
     needs: [guard, probe]
